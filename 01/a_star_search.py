@@ -16,19 +16,10 @@ def a_star_search(problem):
  
     init_state = problem.init_state
     goal = problem.goal_states[0]
-
-    # Debug zone to understand datastructures
-    """
-    print("\n==Hello from a_star_search==")
-    print("\tGoal state: {}".format(goal))
-    print("\tInit state: {}".format(init_state))
-
-    print("\tCurrent actions: {}".format(problem.get_actions(init_state)))
-    print("\tCurrent position: {}".format(problem.get_position(init_state)))
     
+    num_nodes_expanded = 0
+    max_frontier_size = 0
 
-    print("\n\n")    
-    """
 
     # PART I: Create frontier priority queue, set `explored`, dictionary denoting parents.
     Q = queue.PriorityQueue() # (f(n), n)
@@ -53,11 +44,19 @@ def a_star_search(problem):
     v = None
     v_get = None
     while(not Q.empty()):
+
+        # Checking frontier size
+        max_frontier_size = max(max_frontier_size, len(frontier))
+        num_nodes_expanded+=1
+
         v_get = Q.get()
         v = v_get[1]
         vfn = v_get[0]
 
-        frontier.remove(v)
+        try:
+            frontier.remove(v)
+        except:
+            pass
 
         if(v == goal):
             break
@@ -79,13 +78,15 @@ def a_star_search(problem):
                 vi_fn = parent[vi][1] + problem.manhattan_heuristic(vi, goal)
 
                 Q.put( (vi_fn, vi) )
+                frontier.add(vi)
                 # Don't need to add vi to frontier (?) 
 
     # Part III: If `goal` has no parent in the dictionary, return []. Otherwise, trace path through the graph.
 
     if v != goal:
-        print("UNSOLVABLE")
+        # print("UNSOLVABLE")
         return [], 0, 0
+        # return [init_state, goal], 0, 0 # Debugging statement...
 
     path = []
     cur_node = goal
@@ -98,8 +99,6 @@ def a_star_search(problem):
 
     # Part IV: Figure out how to calculate `num_nodes_expanded` and `max_frontier_size`.
 
-    num_nodes_expanded = 0
-    max_frontier_size = 0
     return path, num_nodes_expanded, max_frontier_size
 
 
@@ -123,16 +122,32 @@ def search_phase_transition():
 if __name__ == '__main__':
     # Test your code here!
     # Create a random instance of GridSearchProblem
-    p_occ = 0.5
+    p_occ = 0.25
     M = 10
     N = 10
     problem = get_random_grid_problem(p_occ, M, N)
     # Solve it
     path, num_nodes_expanded, max_frontier_size = a_star_search(problem)
+    print("Nodes Expanded: \t{}".format(num_nodes_expanded))
+    print("Max Frontier: \t\t{}".format(max_frontier_size))
     # Check the result
     correct = problem.check_solution(path)
     print("Solution is correct: {:}".format(correct))
     # Plot the result
     problem.plot_solution(path)
-
+    # Experiment and compare with BFS    # Test your code here!
+    # Create a random instance of GridSearchProblem
+    p_occ = 0.25
+    M = 10
+    N = 10
+    problem = get_random_grid_problem(p_occ, M, N)
+    # Solve it
+    path, num_nodes_expanded, max_frontier_size = a_star_search(problem)
+    print("Nodes Expanded: \t{}".format(num_nodes_expanded))
+    print("Max Frontier: \t\t{}".format(max_frontier_size))
+    # Check the result
+    correct = problem.check_solution(path)
+    print("Solution is correct: {:}".format(correct))
+    # Plot the result
+    problem.plot_solution(path)
     # Experiment and compare with BFS

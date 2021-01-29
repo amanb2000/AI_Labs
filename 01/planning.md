@@ -79,7 +79,7 @@ Deque Datastructure:
 - `dict()` for storing parent, distance.
 
 ### Tasks
-- [ ] Fill in `a_star_search` from `a_star_search.py`
+- [x] Fill in `a_star_search` from `a_star_search.py`
 	- Integer state path, num nodes generated, maximum frontier size encountered
 - [ ] Re-create graphs from `264` of AIMA for different `N` values (square maze size).
 	- Symbol ratio -> `p_occ` (probability of cell being occupied).
