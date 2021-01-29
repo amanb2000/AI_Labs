@@ -13,12 +13,93 @@ def a_star_search(problem):
              num_nodes_expanded: number of nodes expanded by your search
              max_frontier_size: maximum frontier size during search
     """
-    ####
-    #   COMPLETE THIS CODE
-    ####
+ 
+    init_state = problem.init_state
+    goal = problem.goal_states[0]
+
+    # Debug zone to understand datastructures
+    """
+    print("\n==Hello from a_star_search==")
+    print("\tGoal state: {}".format(goal))
+    print("\tInit state: {}".format(init_state))
+
+    print("\tCurrent actions: {}".format(problem.get_actions(init_state)))
+    print("\tCurrent position: {}".format(problem.get_position(init_state)))
+    
+
+    print("\n\n")    
+    """
+
+    # PART I: Create frontier priority queue, set `explored`, dictionary denoting parents.
+    Q = queue.PriorityQueue() # (f(n), n)
+    frontier = set() # frontier tracks the same items as Q. Must be synchronized.
+    explored = set() # n
+    parent = {} # (parent, cost_to_get)
+
+
+    Q.put( (problem.manhattan_heuristic(init_state, goal), init_state) )
+    frontier.add(init_state)
+    parent[init_state] = (None, 0) # NOTE: The cost-to-get is for the object i in parent[i]
+
+    # Part II: While the frontier is not empty:
+        # pop a node v from the frontier
+        # test if it's the GOAL => break out if it is
+        # add the node to the `explored` set.
+        # for each of v's potential actions v_i
+            # If v_i isn't in `explored` or `frontier`: insert into the frontier
+            # If child IS in frontier BUT has a higher cost:
+                # Replace the child's parent with v
+                # Update the child's cost
+    v = None
+    v_get = None
+    while(not Q.empty()):
+        v_get = Q.get()
+        v = v_get[1]
+        vfn = v_get[0]
+
+        frontier.remove(v)
+
+        if(v == goal):
+            break
+
+        explored.add(v)
+
+        for (garbage, vi) in problem.get_actions(v):
+            if vi not in explored and vi not in frontier:
+                vi_gn = parent[v][1]+1 # cost-to-go for v plus 1
+                parent[vi] = (v, vi_gn) # setting the parent and CTG info for vi
+
+                vi_fn = vi_gn + problem.manhattan_heuristic(vi, goal)
+                
+                Q.put( (vi_fn, vi) )
+                frontier.add(vi)
+
+            elif vi in frontier and parent[vi][1] > parent[v][1]+1:
+                parent[vi] = (v, parent[v][1]+1)
+                vi_fn = parent[vi][1] + problem.manhattan_heuristic(vi, goal)
+
+                Q.put( (vi_fn, vi) )
+                # Don't need to add vi to frontier (?) 
+
+    # Part III: If `goal` has no parent in the dictionary, return []. Otherwise, trace path through the graph.
+
+    if v != goal:
+        print("UNSOLVABLE")
+        return [], 0, 0
+
+    path = []
+    cur_node = goal
+
+    while cur_node != None:
+        path.append(cur_node)
+        cur_node = parent[cur_node][0]
+    
+    path.reverse()
+
+    # Part IV: Figure out how to calculate `num_nodes_expanded` and `max_frontier_size`.
+
     num_nodes_expanded = 0
     max_frontier_size = 0
-    path = []
     return path, num_nodes_expanded, max_frontier_size
 
 
@@ -42,7 +123,7 @@ def search_phase_transition():
 if __name__ == '__main__':
     # Test your code here!
     # Create a random instance of GridSearchProblem
-    p_occ = 0.25
+    p_occ = 0.5
     M = 10
     N = 10
     problem = get_random_grid_problem(p_occ, M, N)

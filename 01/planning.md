@@ -67,6 +67,31 @@ Deque Datastructure:
 - `collections.deque`
 
 
+## Informed Search
+
+- Uniform cost search -- use Euclidian or Manhattan distance for $h(n)$ measurement.
+- Don't have to remove a node from the frontier if a node with a shorter path to the initial state is found.
+	- Less memory efficient, but sometimes faster.
+
+### Specific Suggestions
+- `PriorityQueue` class from `queue`
+- `set()` for hash table.
+- `dict()` for storing parent, distance.
+
+### Tasks
+- [ ] Fill in `a_star_search` from `a_star_search.py`
+	- Integer state path, num nodes generated, maximum frontier size encountered
+- [ ] Re-create graphs from `264` of AIMA for different `N` values (square maze size).
+	- Symbol ratio -> `p_occ` (probability of cell being occupied).
+	- For ONE CHART: Make y-axis = "portion of runs solved by A\*
+	- For ONE CHART: Average number of nodes generated during the n-runs.
+		- Generated nodes *include those not added to the frontier* (legal transitions that are not added bc already explored).
+	- N = (20, 100, 500), let M=N every time.
+	- n_runs = 100
+	- p_occ = range(0.1, 0.05, 0.9)
+	- `get_random_grid_problem` -> generate problem instanece.
+	- << other questions in the handout >>
+- [ ] Code `search_phase_transition` in `a_star_search.py`.
 
 
 
