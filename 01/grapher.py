@@ -20,10 +20,10 @@ To-Do Items:
 - [x] Set up `a_star_search` function call on `get_random_grid_problem`.
 - [x] Set up pandas array record keeping.
 - [x] Set up pandas array record saving.
-- [ ] Set up the experiment loop(s) and variables/ranges.
-- [ ] Set up parallization loop.
-- [ ] Test on small subset, ensure proper output.
-- [ ] Run full experiment.
+- [x] Set up the experiment loop(s) and variables/ranges.
+- [x] Set up parallization loop.
+- [x] Test on small subset, ensure proper output.
+- [x] Run full experiment.
 
 """
 
@@ -49,6 +49,7 @@ def run_experiment():
     exp_num = 0
     with concurrent.futures.ProcessPoolExecutor() as executor:
         jobs = []
+        prams = []
 
         for N in (20, 100, 500): 
             for p_occ in p_occs:
@@ -58,11 +59,13 @@ def run_experiment():
                     # path, num_nodes_expanded, max_frontier_size = astra(problem)
                     f = executor.submit(astra, problem)
                     jobs.append(f)
+                    prams.append((p_occ, N, run))
 
 
-        for job in jobs:
-            path, num_nodes_expanded, max_frontier_size = job.result()
-            d = {'run': exp_num, 'N': N, 'p_occ': p_occ, 'nodes_generated': num_nodes_expanded, 'SAT': path != []}
+        for i in range(len(jobs)):
+            path, num_nodes_expanded, max_frontier_size = jobs[i].result()
+            (p_occ, N, run) = prams[i]
+            d = {'run': exp_num, 'N': N, 'p_occ': round(p_occ,2), 'nodes_generated': num_nodes_expanded, 'SAT': path != []}
             df = df.append(d, ignore_index=True)
             pbar.update(1)
             exp_num+=1
