@@ -31,11 +31,33 @@ def initialize_greedy_n_queens(N: int) -> list:
     # First queen goes in a random spot
     greedy_init[0] = np.random.randint(0, N)
 
+    for i in range(1,N): # Column number
+        conflicts = np.zeros(N)
+        for j in range(0,i): # Iterating through previously assigned queens.
+            x1 = greedy_init[j] # Row of queen in column j
+            y1 = j
+
+            y2 = i # column of potential queen.
+            for x2 in range(N):
+                conflicts[x2] += conflict(x1, y1, x2, y2)
+
+        greedy_init[i] = np.argmin(conflicts)
+
+
     ### YOUR CODE GOES HERE
 
-    return greedy_init
+    return greedy_init.astype(int)
+
+
+def conflict(x1,y1, x2,y2 ):
+    if x1 == x2 or y1 == y2: 
+        return 1
+    if abs(x1-x2) == abs(y1-y2): 
+        return 1
+    return 0
+
 
 
 if __name__ == '__main__':
-    # You can test your code here
-    pass
+    # You can test your code here 
+    print(initialize_greedy_n_queens(4))
