@@ -41,7 +41,8 @@ def initialize_greedy_n_queens(N: int) -> list:
             for x2 in range(N):
                 conflicts[x2] += conflict(x1, y1, x2, y2)
 
-        greedy_init[i] = np.argmin(conflicts)
+        # greedy_init[i] = np.argmin(conflicts)
+        greedy_init[i] = np.random.choice(np.flatnonzero(conflicts == conflicts.min()))
 
 
     ### YOUR CODE GOES HERE

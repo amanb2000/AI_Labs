@@ -36,11 +36,52 @@ def min_conflicts_n_queens(initialization: list) -> (list, int):
     max_steps = 1000
 
     for idx in range(max_steps):
-        ## YOUR CODE HERE
-        pass
+        # 1: iterate through all columns, add column numbers that conflict to a list.
+        conflict_columns = set()
+
+        for col in range(N):
+            if col in conflict_columns:
+                continue
+
+            x1 = solution[col]
+            y1 = col
+            for pot_conf in range(N):
+                if pot_conf == col:
+                    continue
+                if(pot_conf in conflict_columns):
+                    continue
+
+                x2 = solution[pot_conf]
+                y2 = pot_conf
+
+                if conflict(x1, y1, x2, y2):
+                    conflict_columns.add(col)
+                    conflict_columns.add(pot_conf)
+                
+        # 2: if the list is empty, return.
+        if len(conflict_columns) == 0:
+            break
+
+        # 3: randomly select a conflicting column from the list.
+        focus = random.choice(list(conflict_columns), 1)
+
+        # 4: find the minimum conflict ROW for that column's queen (see greedy solution).
+
+        # 5: set the new row value.
+
+        # end for
+
+
 
     return solution, num_steps
 
+
+def conflict(x1,y1, x2,y2 ):
+    if x1 == x2 or y1 == y2:
+        return 1
+    if abs(x1-x2) == abs(y1-y2):
+        return 1
+    return 0
 
 if __name__ == '__main__':
     # Test your code here!
