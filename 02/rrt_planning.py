@@ -73,13 +73,46 @@ def planning(rrt_dubins, display_map=False):
 
     # LOOP for max iterations
     i = 0
+    final = False
     while i < rrt_dubins.max_iter:
         i += 1
 
         # Generate a random vehicle state (x, y, yaw)
+         # rrt_dubins.map_area = [min_x, max_x, min_y, max_y] is where we sample, (x, y) from.
+         # yaw is somewhere between 0 and 2pi radians.
+         # state should 90-99% of the time be random. Otherwise, it should be the `objective` node.
+        x = random.uniform(rrt_dubins.x_lim[0], rrt_dubins.x_lim[1])
+        y = random.uniform(rrt_dubins.y_lim[0], rrt_dubins.y_lim[1])
+        yaw = random.uniform(0, math.pi)
 
+        goal = False
+
+        min_i = 0
         # Find an existing node nearest to the random vehicle state
-        new_node = rrt_dubins.propogate(rrt_dubins.Node(0,0,0), rrt_dubins.Node(1,1,0)) #example of usage
+        if(random.random() < 0.9):
+            # Find the nearest node to this random node.
+            goal = rrt_dubins.Node(x,y,yaw)
+            min_dist = (rrt_dubins.node_list[0].x-x)**2 + (rrt_dubins.node_list[0].y-y)**2
+            min_i = 0
+            for i in range(len(rrt_dubins.node_list)):
+                dist = (rrt_dubins.node_list[i].x-x)**2 + (rrt_dubins.node_list[i].y-y)**2
+                if dist < min_dist:
+                    min_dist = dist
+                    min_i = i
+            
+            # new_node = rrt_dubins.propogate(rrt_dubins.node_list[min_i], rrt_dubins.node(x, y, yaw)) #example of usage
+        else:
+            # Find the nearest node to the objective.
+            goal = rrt_dubins.goal
+            min_dist = (rrt_dubins.node_list[0].x-rrt_dubins.goal.x)**2 + (rrt_dubins.node_list[0].y-rrt_dubins.goal.y)**2
+            min_i = 0
+            for i in range(len(rrt_dubins.node_list)):
+                dist = (rrt_dubins.node_list[i].x-rrt_dubins.goal.x)**2 + (rrt_dubins.node_list[i].y-rrt_dubins.goal.y)**2
+                if dist < min_dist:
+                    min_dist = dist
+                    min_i = i
+            
+        new_node = rrt_dubins.propogate(rrt_dubins.node_list[min_i], goal)
 
         # Check if the path between nearest node and random state has obstacle collision
         # Add the node to nodes_list if it is valid
@@ -92,13 +125,18 @@ def planning(rrt_dubins, display_map=False):
             rrt_dubins.draw_graph()
 
         # Check if new_node is close to goal
-        if True:
+        if new_node.is_state_identical(rrt_dubins.goal):
             print("Iters:", i, ", number of nodes:", len(rrt_dubins.node_list))
+            final = new_node
             break
 
     if i == rrt_dubins.max_iter:
         print('reached max iterations')
 
     # Return path, which is a list of nodes leading to the goal
-
-    return None
+    path = []
+   #  print("Dubins start.parent: ", rrt_dubins.start.parent)
+    while(final != None):
+       path.append(final)
+       final = final.parent
+    return path

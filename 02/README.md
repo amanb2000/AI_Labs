@@ -38,7 +38,7 @@ conflict( (x1,y1), (x2,y2) ):
 	return False
 ```
 
-### II.2: Min-Conflicts Solver
+## Part III: Dubins Path Planning
 
 
 
