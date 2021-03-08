@@ -1,4 +1,5 @@
 import numpy as np
+import random
 ### WARNING: DO NOT CHANGE THE NAME OF THIS FILE, ITS FUNCTION SIGNATURE OR IMPORT STATEMENTS
 
 
@@ -60,12 +61,31 @@ def min_conflicts_n_queens(initialization: list) -> (list, int):
                 
         # 2: if the list is empty, return.
         if len(conflict_columns) == 0:
+            # print("NONE LEFT!")
             break
 
+        # print("CONFLICT_COLUMNS: ",conflict_columns)
         # 3: randomly select a conflicting column from the list.
-        focus = random.choice(list(conflict_columns), 1)
+        # focus_column = random.choices(list(conflict_columns), k=1)[0] # TODO: Replace this with some np.random thing...
+        focus_column = np.random.choice(np.asarray(list(conflict_columns)))
+        
+        # print('Focus column: ', focus_column)
 
         # 4: find the minimum conflict ROW for that column's queen (see greedy solution).
+        conflicts = np.zeros(N) # number of conflicts in each row of the focus column.
+        for i in range(N): # Iterating through previously assigned queens.
+            if i == focus_column:
+                continue
+
+            x1 = solution[i] # Row of queen in column i of the current solution
+            y1 = i # column of queen in question from current solution.
+
+            y2 = focus_column # column of potential queen.
+            for x2 in range(N):
+                conflicts[x2] += conflict(x1, y1, x2, y2)
+        
+        solution[focus_column] = np.random.choice(np.flatnonzero(conflicts == conflicts.min()))
+
 
         # 5: set the new row value.
 
