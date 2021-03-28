@@ -19,13 +19,14 @@ def dt_entropy(goal, examples):
                                    # must record the number of possible goal states.
     p_goal_state = [0]*num_goal_states # Variable to store probability of each goal state.
 
-    for i in range(num_goal_states):
-        for j in examples[:,-1]:
-            if j == i:
-                p_goal_state[i] += 1/len(examples[:,-1])
+    for i in range(num_goal_states): # Iterating through each of the possible goal states
+        for j in examples[:,-1]: # Iterating through each of the goaal states recorded in `examples`
+            if j == i: 
+                p_goal_state[i] += 1/len(examples[:,-1]) # If they match, we increment the probability of the
+                                                         # given goal state
 
-        if p_goal_state[i] != 0:
-            entropy -= p_goal_state[i]*np.log2(p_goal_state[i])
+        if p_goal_state[i] != 0: # If statement to avoid log(0) error.
+            entropy -= p_goal_state[i]*np.log2(p_goal_state[i]) # incrementing entropy
 
     # Be careful to check the number of examples
     # Avoid NaN examples by treating the log2(0.0) = 0
@@ -46,13 +47,16 @@ def dt_cond_entropy(attribute, col_idx, goal, examples):
     # INSERT YOUR CODE HERE.
     cond_entropy = 0.0
 
-    d = len(attribute[1])
+    d = len(attribute[1]) # number of possible attribute states
 
-    for k in range(d):
+    for k in range(d): # iterating through each attribute state
+        # Calculate probability of attribute class k
         prob_class_k = np.sum(examples[:,col_idx] == k)/len(examples[:,col_idx])
+        # Mask for rows of `examples` corresponding to attribute = k
         mask = (examples[:,col_idx] == k)
+        # Calculating the in-class entropy w.r.t. goal state based on the mask. 
         class_entropy = dt_entropy(goal, examples[mask,:])
-
+        # Incrementing total entropy arising from the condition.
         cond_entropy += prob_class_k*class_entropy
 
     return cond_entropy
@@ -72,7 +76,8 @@ def dt_info_gain(attribute, col_idx, goal, examples):
     """
     # INSERT YOUR CODE HERE.
     info_gain = 0.
-    info_gain += dt_entropy(goal, examples)
+    info_gain += dt_entropy(goal, examples) # Adding current entropy w.r.t. goal
+    # Subtracting conditional entropy upon attribute split. 
     info_gain -= dt_cond_entropy(attribute, col_idx, goal, examples)
 
     return info_gain
@@ -93,12 +98,15 @@ def dt_intrinsic_info(attribute, col_idx, examples):
     # Avoid NaN examples by treating the log2(0.0) = 0
     intrinsic_info = 0.
 
-    d = len(attribute[1])
+    d = len(attribute[1]) # Number of possible values for `attribute`.
 
-    for k in range(d):
+    for k in range(d): # Iterating through each possible value for `attribute`.
+        # pn represents value of `p + n`
         pn = len(examples[:,col_idx])
+        # pknk represents value of `p_k + n_k`
         pknk = np.sum(examples[:,col_idx] == k)
         if pknk > 0:
+            # if pknk is greater than zero, we increment intrinsic information accordingly.
             intrinsic_info -= (pknk/pn)*np.log2(pknk/pn) 
 
     return intrinsic_info
@@ -117,13 +125,16 @@ def dt_gain_ratio(attribute, col_idx, goal, examples):
     """
     # INSERT YOUR CODE HERE.
     # Avoid NaN examples by treating 0.0/0.0 = 0.0
+
+    # Calculating gain from the given `attribute` test.
     gain = dt_info_gain(attribute, col_idx, goal, examples)
+    # Calculating the intrinsic information of the `attribute`.
     intrinsic_info = dt_intrinsic_info(attribute, col_idx, examples)
 
     gain_ratio = 0.0
 
-    if intrinsic_info != 0:
-        gain_ratio = gain/intrinsic_info
+    if intrinsic_info != 0: # Conditional to avoid NaN from x/0
+        gain_ratio = gain/intrinsic_info # Calculating gain ratio.
 
     return gain_ratio
 
@@ -174,17 +185,21 @@ def learn_decision_tree(parent, attributes, goal, examples, score_fun):
     # Now, recurse down each branch (operating on a subset of examples below).
     # You should append to node.branches in this recursion
     for i in range(len(attributes[best_col][1])):
-        mask = examples[:,best_col] == i
-        col_mask = np.ones(len(examples[0,:]))
+        mask = examples[:,best_col] == i # row mask to select all examples with `attribute == i`
+        col_mask = np.ones(len(examples[0,:])) # column mask to select all attributes that remain 
+                                               # after the above attribute test.
         col_mask[best_col] = 0
         col_mask = col_mask == 1
 
+        # Selecing the remaining examples using the row mask and the column mask.
         exs = examples[mask,:]
         exs = exs[:,col_mask]
 
+        # Selecting the remaining attributes by copying and popping the attribute.
         new_attr = attributes.copy()
         new_attr.pop(best_col) 
-
+        
+        # Creating branch node (recursively)
         node.branches.append(learn_decision_tree(node, new_attr, goal, exs, score_fun))
 
     return node
