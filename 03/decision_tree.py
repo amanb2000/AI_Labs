@@ -51,7 +51,7 @@ def dt_cond_entropy(attribute, col_idx, goal, examples):
     for k in range(d):
         prob_class_k = np.sum(examples[:,col_idx] == k)/len(examples[:,col_idx])
         mask = (examples[:,col_idx] == k)
-        class_entropy = dt_entropy(goal, examples[msk,:])
+        class_entropy = dt_entropy(goal, examples[mask,:])
 
         cond_entropy += prob_class_k*class_entropy
 
@@ -145,29 +145,47 @@ def learn_decision_tree(parent, attributes, goal, examples, score_fun):
     node = None
     # 1. Do any examples reach this point?
     if len(examples) == 0:
-        # TODO: return plurality value for parent example
+        # DONE: return plurality value for parent example
+        return TreeNode(parent, None, None, True, plurality_value(goal, parent.examples))
 
     # 2. Or do all examples have the same class/label? If so, we're done!
     if np.sum(examples[:,-1] == examples[0,-1]) == len(examples[:,-1]):
-        # TODO: We are done (whatever that means...)
+        # DONE: We are done (whatever that means...)
+        return TreeNode(parent, None, None, True, examples[0,-1])
     
     # 3. No attributes left? Choose the majority class/label.
     if len(attributes) == 0:
-        # TODO: return plurality of examples.
+        return TreeNode(parent, None, None, True, plurality_value(goal, examples))
 
     # 4. Otherwise, need to choose an attribute to split on, but which one? Use score_fun and loop over attributes!
+    best_col_score = 0
     best_col = 0
     for i in range(len(attributes)):
         # Best score?
-        if score_fun(attributes) > 
+        if score_fun(attributes[i], i, goal, examples) > best_col_score: 
+            best_col_score = score_fun(attributes[i], i, goal, examples)
+            best_col = i
         # NOTE: to pass the Autolab tests, when breaking ties you should always select the attribute with the smallest (i.e.
         # leftmost) column index!
+    
+    # Create a new internal node using the best attribute, something like:
+    node = TreeNode(parent, attributes[best_col], examples, False, 0)
 
-        # Create a new internal node using the best attribute, something like:
-        # node = TreeNode(parent, attributes[best_index], examples, False, 0)
+    # Now, recurse down each branch (operating on a subset of examples below).
+    # You should append to node.branches in this recursion
+    for i in range(len(attributes[best_col][1])):
+        mask = examples[:,best_col] == i
+        col_mask = np.ones(len(examples[0,:]))
+        col_mask[best_col] = 0
+        col_mask = col_mask == 1
 
-        # Now, recurse down each branch (operating on a subset of examples below).
-        # You should append to node.branches in this recursion
+        exs = examples[mask,:]
+        exs = exs[:,col_mask]
+
+        new_attr = attributes.copy()
+        new_attr.pop(best_col) 
+
+        node.branches.append(learn_decision_tree(node, new_attr, goal, exs, score_fun))
 
     return node
 
