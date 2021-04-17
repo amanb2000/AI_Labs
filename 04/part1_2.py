@@ -60,9 +60,56 @@ def value_iteration(env: mdp_env, agent: mdp_agent, eps: float, max_iter = 1000)
                 the mdp agent. Do not return this function.
     """
     policy = np.empty_like(env.states)
-    agent.utility = np.zeros([len(env.states), 1])
+    # agent.utility = np.zeros([len(env.states), 1])
+    agent.utility = np.zeros(len(env.states))
+
+    print("TRANSITION MODEL {}".format(env.transition_model.shape))
 
     ## START: Student code
+    # NOTE: The `env` hasa `transition_model`. 
+    # transition_model:  Matrix of size (SxSxA) specifying all of the
+    #                    transition probabilities
+    
+    U_p = np.zeros(agent.utility.shape) # U'
+
+    delta = 0 # Maximum change in utility of any state in an iteration.
+
+    cnt = 0 # counter for the number of iterations.
+    while cnt < max_iter:
+        delta = 0
+        agent.utility = U_p.copy()
+
+        for s in env.states:
+            max_term = None # max_{a\in A} (\sum_{s'} P(s'|s,a) U[s'] )
+            for a in env.actions:
+                pot_max = 0
+                for s_p in env.states: # s_p is s', we now sum over P(s'|s,a)*U[s']
+                    pot_max += env.transition_model[s,s_p,a]*agent.utility[s_p]
+                if max_term == None or pot_max > max_term:
+                    max_term = pot_max
+            
+            U_p[s] = env.rewards[s] + agent.gamma * max_term
+
+        if delta < np.max(np.abs(agent.utility - U_p)):
+            delta = np.max(np.abs(agent.utility - U_p))
+
+        if delta < eps*(1-agent.gamma)/agent.gamma:
+            break
+
+    # Generating the policy: For each state, we take the action with the maximum expected value.
+    for s in env.states:
+        max_a = None
+        max_EV = None
+
+        for a in env.actions:
+            pot_max_EV = 0
+            for s_p in env.states:
+                pot_max_EV += env.transition_model[s,s_p,a]*agent.utility[s_p]
+            if max_EV == None or pot_max_EV > max_EV: 
+                max_EV = pot_max_EV
+                max_a = a
+        
+        policy[s] = max_a
 
     ## END Student code
     return policy
