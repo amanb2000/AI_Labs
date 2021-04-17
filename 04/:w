@@ -41,45 +41,6 @@ INSTRUCTIONS
 """
 
 
-def policy_evaluation_smart(policy, agent, env):
-    n = len(env.states)
-    P = np.zeros([n,n])
-
-    for i in range(n):
-        for j in range(n):
-            P[i,j] = env.transition_model[env.states[i], env.states[j], policy[env.states[i]] ]
-
-    P = P*agent.gamma
-
-    print("Policy: ",policy)
-
-    print("P: ",P)
-    
-    r = np.asarray(env.rewards)
-     
-    inv_term = np.linalg.inv(P-np.eye(n)) 
-
-    print("Inv_term: ", inv_term)
-
-    u = np.linalg.inv(P-np.eye(n)) @ (-r)
-
-    return u
-
-
-def policy_evaluation(policy, agent, env):
-    U_i_1 = np.zeros(agent.utility.shape)
-    
-    for s in env.states:
-        sum_term = 0
-        for s_p in env.states:
-            sum_term += env.transition_model[s, s_p, policy[s]] * agent.utility[s_p]
-
-        U_i_1[s] = env.rewards[s] + agent.gamma * sum_term
-
-    return U_i_1
-
-
-
 def policy_iteration(env: mdp_env, agent: mdp_agent, max_iter = 1000) -> np.ndarray:
     """
     policy_iteration method implements VALUE ITERATION MDP solver,
@@ -99,13 +60,13 @@ def policy_iteration(env: mdp_env, agent: mdp_agent, max_iter = 1000) -> np.ndar
     """
     np.random.seed(1) # TODO: Remove this
 
-    policy = np.random.randint(len(env.actions), size=(len(env.states)))
+    policy = np.random.randint(len(env.actions), size=(len(env.states), 1))
     agent.utility = np.zeros([len(env.states)])
 
     ## START: Student code
     unchanged = False
     while not unchanged:
-        agent.utility = policy_evaluation(policy, agent, env)
+        agent.utility = policy_evaluation(policy, agent.utility, env)
         unchanged = True
 
         for s in env.states:
@@ -121,10 +82,10 @@ def policy_iteration(env: mdp_env, agent: mdp_agent, max_iter = 1000) -> np.ndar
 
             reg_sum = 0
             for s_p in env.states:
-                reg_sum += env.transition_model[s, s_p, policy[s]] * agent.utility[s_p]
+                reg_sum += eng.transition_model[s, s_p, policy[s]] * agent.utility[s_p]
 
             if max_sum > reg_sum:
-                policy[s] = max_a
+                agent.policy[s] = max_a
                 unchanged = False
 
     ## END: Student code
