@@ -63,7 +63,6 @@ def value_iteration(env: mdp_env, agent: mdp_agent, eps: float, max_iter = 1000)
     # agent.utility = np.zeros([len(env.states), 1])
     agent.utility = np.zeros(len(env.states))
 
-    print("TRANSITION MODEL {}".format(env.transition_model.shape))
 
     ## START: Student code
     # NOTE: The `env` hasa `transition_model`. 
@@ -110,6 +109,9 @@ def value_iteration(env: mdp_env, agent: mdp_agent, eps: float, max_iter = 1000)
                 max_a = a
         
         policy[s] = max_a
+
+    agent.utility = agent.utility.reshape( [len(agent.utility), 1] )
+    # print("\n\nAGENT.UTILITY.SHAPE: {}\n\n".format(agent.utility.shape))
 
     ## END Student code
     return policy

@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 import time
 
 from mab_util import random_MAB_env, run_experiment
-from part3_solution import MAB_agent
+from part3 import MAB_agent
 
 MAX_RUNTIME_PE = 0.0001 #s
 

@@ -38,6 +38,15 @@ class MAB_agent:
         self.__num_arms = num_arms #private
         ## IMPLEMENTATION
 
+        # Hyperparams:
+        self.Q_init = 0. # initialization values for each Q
+
+        # Initializations:
+        self.N_a = np.zeros(num_arms)
+        self.Q = np.ones(num_arms) * self.Q_init
+        self.t = 1 # time step number
+        self.c = .1 # tuning parameter for how much we value reduction in uncertainty.
+
     def update_state(self, action, reward):
         """
             TODO:
@@ -46,7 +55,9 @@ class MAB_agent:
             Optinal function, only use if needed.
         """
         ## IMPLEMENTATION
-        pass
+        self.N_a[action] += 1
+        self.t += 1
+        self.Q[action] = self.Q[action] + (1/self.N_a[action])*(reward-self.Q[action])
 
     def get_action(self) -> int:
         """
@@ -56,4 +67,8 @@ class MAB_agent:
             Return the index of the arm picked by the policy.
         """
         ## IMPLEMENTATION
-        raise NotImplementedError
+        EVs = self.Q + self.c * np.sqrt(np.log(self.t)/(self.N_a+.1))
+        return np.argmax(EVs)
+
+
+
