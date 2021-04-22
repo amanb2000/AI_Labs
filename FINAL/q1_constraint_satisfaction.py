@@ -50,6 +50,115 @@ def sudoku_conflicts(board: np.ndarray, free_variables: np.ndarray) -> np.ndarra
     return conflicts > 0
 
 
+
+def deep_copy_domains(domains):
+    n_dom = []
+
+    for row in domains:
+        tmp = []
+        for d in row:
+            if type(d) != bool:
+                tmp.append(d.copy())
+            else:
+                tmp.append(False)
+        n_dom.append(tmp)
+
+    return n_dom
+
+def select_unassigned(domains):
+    """
+    Select the maximally constrained entry. Returns False if an error occurs, returns (i,j) for the selected item
+    otherwise.
+    """
+    max_i = None
+    max_j = None
+    min_len = None
+
+    for i in range(9):
+        for j in range(9):
+            if type(domains[i][j]) != bool:
+                if min_len == None or len(domains[i][j]) < min_len:
+                    min_len = len(domains[i][j])
+                    max_i = i
+                    max_j = j
+    
+    return max_i, max_j
+
+def domain_update(ds_in, i_s, j_s, asg):
+    ds_cpy = deep_copy_domains(ds_in)
+    ds_cpy[i_s][j_s] = False
+
+    # Iterate through rows and columns:
+    for i in range(9):
+        if type(ds_cpy[i][j_s]) != bool and asg in ds_cpy[i][j_s]:
+            (ds_cpy[i][j_s]).remove(asg)
+        if type(ds_cpy[i_s][i]) != bool and asg in ds_cpy[i_s][i]:
+            (ds_cpy[i_s][i]).remove(asg)
+
+    # Iterate through the local box:
+    i_st = (i_s // 3)*3
+    j_st = (j_s // 3)*3
+
+    for i in range(i_st, i_st+3):
+        for j in range(j_st, j_st+3):
+            if type(ds_cpy[i][j]) != bool and asg in ds_cpy[i][j]:
+                ds_cpy[i][j].remove(asg)
+
+    return ds_cpy
+
+
+
+def backtrack(assignment: np.ndarray, domains):
+    """
+    Backtrack function from AIMA pg. 215. Either returns a solution numpy array or `False` to indicate failure to 
+    find solution on the branch in question. 
+    """
+    
+    # Check if the assignment has zeros. If not, check that there are no conflicts and return the result of that check.
+    if 0 not in assignment:
+        return assignment
+
+    # Select an unassigned variable (using a method `select_unassigned` that minimizes number of conflicts).
+    i_s, j_s = select_unassigned(domains)
+    
+    # Iterate i through the domain of the selected variable.
+    for asg in domains[i_s][j_s]:
+        # Make a copy of the assignment array to work with for the rest of this...
+        ds_cpy = deep_copy_domains(domains)
+        ass_cpy = np.copy(assignment)
+        # Add i to the assignment (and update the constraint Set array).
+        # Update ds_cpy based on assignment
+        ds_cpy = domain_update(ds_cpy, i_s, j_s, asg)
+        # Update ass_cpy based on assignment
+        ass_cpy[i_s,j_s] = asg
+        # Recursive call!
+        result = backtrack(ass_cpy, ds_cpy)
+        if type(result) != bool:
+            return result
+
+    return False
+
+def get_allowable_entries(board, i, j):
+    i_st = (i//3)*3
+    j_st = (j//3)*3
+
+    allowable = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    for num in board[i,:]:
+        if num in allowable:
+            allowable.remove(num)
+
+    for num in board[:,j]:
+        if num in allowable:
+            allowable.remove(num)
+
+    for nums in board[i_st:(i_st+3),j_st:(j_st+3)]:
+        for num in nums:
+            if num in allowable:
+                allowable.remove(num)
+
+    return allowable
+
 def sudoku_solver(board: np.ndarray) -> np.ndarray:
     """
     Solves a standard 9x9 Sudoku puzzle.
@@ -63,8 +172,25 @@ def sudoku_solver(board: np.ndarray) -> np.ndarray:
 
     ### STUDENT CODE GOES HERE
     # Use a mix of search and inference for CSPs to solve Sudoku
-    pass
+    
+    # Step I: generate the domains set list.
+    domains = []
 
+    for i in range(9):
+        domain_add = []
+        for j in range(9):
+            if board[i,j] == 0:
+                domain_add.append(get_allowable_entries(board, i, j))
+            else:
+                domain_add.append(False)
+        domains.append(domain_add)
+
+    # Testing domain functions
+    result = backtrack(board, domains)
+
+    if type(result) == bool:
+        return board
+    return result
 
 if __name__ == '__main__':
     # These are 2 of the 3 puzzles that Autolab will grade you on
@@ -93,5 +219,13 @@ if __name__ == '__main__':
 
     # Example of how your code will be called (will throw an error until you complete sudoku_solver above)
     free_variables = easy_input_board == 0
+    
+    # print("\nstarting easy solution...")
     easy_solution = sudoku_solver(easy_input_board)  # Solve
-    conflicts = sudoku_conflicts(easy_solution, free_variables)  # Check the number of conflicts
+    # print("done easy solution!")
+    # print("\nstarting hard solution...")
+    hard_solution = sudoku_solver(hard_input_board)
+    # print("done hard solution!")
+    # print(hard_solution)
+    conflicts = sudoku_conflicts(hard_solution, free_variables)  # Check the number of conflicts
+    # print("num conflicts: {}".format(np.sum(conflicts)))
