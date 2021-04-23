@@ -41,42 +41,20 @@ INSTRUCTIONS
 """
 
 
-def policy_evaluation_smart(policy, agent, env):
-    n = len(env.states)
-    P = np.zeros([n,n])
-
-    for i in range(n):
-        for j in range(n):
-            P[i,j] = env.transition_model[env.states[i], env.states[j], policy[env.states[i]] ]
-
-    P = P*agent.gamma
-
-    print("Policy: ",policy)
-
-    print("P: ",P)
-    
-    r = np.asarray(env.rewards)
-     
-    inv_term = np.linalg.inv(P-np.eye(n)) 
-
-    print("Inv_term: ", inv_term)
-
-    u = np.linalg.inv(P-np.eye(n)) @ (-r)
-
-    return u
-
-
 def policy_evaluation(policy, agent, env):
-    U_i_1 = np.zeros(agent.utility.shape)
+    """
+    Simplified policy evaluation formula from AIMA.
+    """
+    U_i_1 = np.zeros(agent.utility.shape) # New utility value for each state at time i+1
     
-    for s in env.states:
-        sum_term = 0
-        for s_p in env.states:
-            sum_term += env.transition_model[s, s_p, policy[s]] * agent.utility[s_p]
+    for s in env.states: # Iterating through states. 
+        sum_term = 0 # Sum term for the expected future reward from entering state s.
+        for s_p in env.states: # iterating through second-degree states. 
+            sum_term += env.transition_model[s, s_p, policy[s]] * agent.utility[s_p] # adding the expected value from the second-degree state s_p (s prime)
 
-        U_i_1[s] = env.rewards[s] + agent.gamma * sum_term
+        U_i_1[s] = env.rewards[s] + agent.gamma * sum_term # Adding reward and a discounted future reward to obtain the utility value for states s
 
-    return U_i_1
+    return U_i_1 # Returning utility values. 
 
 
 
@@ -97,21 +75,21 @@ def policy_iteration(env: mdp_env, agent: mdp_agent, max_iter = 1000) -> np.ndar
        <agent>  Implicitly, you are populating the utlity matrix of
                 the mdp agent. Do not return this function.
     """
-    np.random.seed(1) # TODO: Remove this
+    # np.random.seed(1) # TODO: Remove this
 
-    policy = np.random.randint(len(env.actions), size=(len(env.states)))
-    agent.utility = np.zeros([len(env.states)])
+    policy = np.random.randint(len(env.actions), size=(len(env.states))) # Initializing the policy as a 1D array (will be reshaped by the end)
+    agent.utility = np.zeros([len(env.states)]) # initializing the utility as a 1D array (will be reshaped by the end). 
 
     ## START: Student code
-    unchanged = False
+    unchanged = False # Flag for whether the policy has changed at all. 
     while not unchanged:
-        agent.utility = policy_evaluation(policy, agent, env)
-        unchanged = True
+        agent.utility = policy_evaluation(policy, agent, env) # Evaluating policy
+        unchanged = True # Unsetting the unchanged flag. 
 
-        for s in env.states:
+        for s in env.states: # iterating through each state
             max_sum = None # max_a sum_{s'} P(s' | s, a) * U[s']
-            max_a = None
-            for a in env.actions:
+            max_a = None # argument that maximizes the sum. 
+            for a in env.actions: # Calculating the maximum sum over all possible actions. 
                 pot_max_sum = 0
                 for s_p in env.states:
                     pot_max_sum += env.transition_model[s, s_p, a]*agent.utility[s_p]
@@ -119,13 +97,13 @@ def policy_iteration(env: mdp_env, agent: mdp_agent, max_iter = 1000) -> np.ndar
                     max_sum = pot_max_sum
                     max_a = a
 
-            reg_sum = 0
+            reg_sum = 0 # calculating the non-action-optimized sum.
             for s_p in env.states:
-                reg_sum += env.transition_model[s, s_p, policy[s]] * agent.utility[s_p]
+                reg_sum += env.transition_model[s, s_p, policy[s]] * agent.utility[s_p] # Expected value from the action based on the policy.
 
-            if max_sum > reg_sum:
-                policy[s] = max_a
-                unchanged = False
+            if max_sum > reg_sum: # if the action-optimized sum is greater than the policy-based sum, we need to continue revising the policy.
+                policy[s] = max_a # Update the action for state 
+                unchanged = False # set the unchanged flag. 
 
     ## END: Student code
 

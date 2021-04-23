@@ -63,11 +63,7 @@ def get_transition_model(env: cleaning_env) -> np.ndarray:
     ## START: Student Code
 
     # Terminal states: If s1 = 0 or 5 (terminal states), then s2 = s1 for all actions.
-    """
-    P[0,0,:] = 1.
-    P[5,5,:] = 1.
-    """
-    # the rest remain at zero probability for the terminal states. 
+    # We leave these at zero.
 
     # Shortcuts for 'left action' and 'right action'.
     l_ac = 0

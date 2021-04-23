@@ -87,3 +87,42 @@ if __name__ == '__main__':
     # grading functionality, but the code you use for 2b needs to be submitted alongside q2_support.py, e.g.:
     # tar cvf handin.tar q2_pomdp.py q2_support.py lookup_table.npy
     # where q2_support.py (this file) has been modified accordingly.
+
+    for num in (2, 5, 10):
+        path = "cache/U{}.npy".format(num)
+        U = None
+        with open(path, 'rb') as f:
+            U = np.load(f, allow_pickle=True)
+        lu = len(U)
+        ls = 5
+        print("\n\nLength of U: ",lu)
+        A = np.zeros([lu, ls])
+
+        for i in range(len(U)):
+            A[i,:] = U[i][1]
+            # print(U[i][0]," ",U[i][1])
+        
+        """
+        Plotting Requirements
+         - [x] Implement value iteration scheme. 
+         - [x] Plot the *expected value* of each state.
+         - [x] Plot the action taken in each state. 
+         - [ ] Comment on the trend in the value function. What mistakes are made if you don't look far ahead? 
+        """
+        EVs = np.zeros(P_neutral.shape)
+        Actions = np.zeros(P_neutral.shape)
+
+        for idx in range(EVs.shape[0]):
+            for jdx in range(EVs.shape[1]):
+                if P_annoyed[idx, jdx] + P_neutral[idx, jdx] <= 1.:  # This expression describes valid beliefs
+                    # Example utility which is just a constant (1.0) for all valid beliefs
+                    p1 = P_annoyed[idx,jdx]
+                    p2 = P_neutral[idx,jdx]
+                    p3 = 1-p1-p2
+                    belief = np.asarray([0,p1,p2,p3,0] )
+                    EVs[idx, jdx] = np.max(A @ belief)
+                    Actions[idx,jdx] = U[np.argmax(A @ belief)][0]
+
+        # Display the utility and policy as contour plots (use the default values)
+        plot_belief_space_utility_heatmap(P_annoyed, P_neutral, EVs, 'Depth {} EV'.format(num))
+        plot_belief_space_action_boundaries(P_annoyed, P_neutral, Actions, 'Depth {} Actions'.format(num))

@@ -1,5 +1,4 @@
 import numpy as np
-import random
 ### WARNING: DO NOT CHANGE THE NAME OF THIS FILE, ITS FUNCTION SIGNATURE OR IMPORT STATEMENTS
 
 
@@ -31,89 +30,90 @@ def min_conflicts_n_queens(initialization: list) -> (list, int):
              num_steps - number of steps (i.e. reassignment of 1 queen's position) required to find the solution.
     """
 
-    N = len(initialization)
-    solution = initialization.copy()
+    N = len(initialization) # Extracting N for easy usage.
+    solution = initialization.copy() # Making a copy of the initialization for our solution.
     num_steps = 0
     max_steps = 1000
+    found = False # Variable for if we actually found a solution OR if we ran out of time.
 
     for idx in range(max_steps):
         # 1: iterate through all columns, add column numbers that conflict to a list.
-        conflict_columns = set()
+        conflict_columns = [] # List of columns that conflict
+        num_steps+=1 
 
-        for col in range(N):
-            if col in conflict_columns:
-                continue
-
-            x1 = solution[col]
-            y1 = col
-            for pot_conf in range(N):
-                if pot_conf == col:
-                    continue
-                if(pot_conf in conflict_columns):
-                    continue
-
-                x2 = solution[pot_conf]
-                y2 = pot_conf
-
-                if conflict(x1, y1, x2, y2):
-                    conflict_columns.add(col)
-                    conflict_columns.add(pot_conf)
+        for col in range(N): # iterating through all columns,
+            if num_conflicts(solution, solution[col], col, N) != 0:
+                conflict_columns.append(col)
                 
         # 2: if the list is empty, return.
         if len(conflict_columns) == 0:
-            # print("NONE LEFT!")
-            break
+            found = True # no conflicts! Solution has been found!
+            break 
 
-        # print("CONFLICT_COLUMNS: ",conflict_columns)
         # 3: randomly select a conflicting column from the list.
-        # focus_column = random.choices(list(conflict_columns), k=1)[0] # TODO: Replace this with some np.random thing...
-        focus_column = np.random.choice(np.asarray(list(conflict_columns)))
-        
-        # print('Focus column: ', focus_column)
+        focus_column = np.random.choice(np.asarray(conflict_columns))
 
-        # 4: find the minimum conflict ROW for that column's queen (see greedy solution).
-        conflicts = np.zeros(N) # number of conflicts in each row of the focus column.
-        for i in range(N): # Iterating through previously assigned queens.
-            if i == focus_column:
-                continue
-
-            x1 = solution[i] # Row of queen in column i of the current solution
-            y1 = i # column of queen in question from current solution.
-
-            y2 = focus_column # column of potential queen.
-            for x2 in range(N):
-                conflicts[x2] += conflict(x1, y1, x2, y2)
-        
-        solution[focus_column] = np.random.choice(np.flatnonzero(conflicts == conflicts.min()))
+        # 4: find the minimum conflict ROW for that column's queen (see greedy solution). Set the row value.
+        solution[focus_column] = greedy_reassignment(solution, focus_column, N)
 
 
-        # 5: set the new row value.
+    if found: # if we did find a solution, we return it.
+        return solution, num_steps
+    else: # else if we didn't find the solution, we return empty list and -1 steps.
+        return [], -1
 
-        # end for
+def num_conflicts(map, row, column, N):
+    """
+    Returns number of conflicts for the given [row, column] within `map`.
+    """
 
+    # I use masks for all possible conflict types (horizontal, up diagonal, down diagonal)
+    # If the current solution[i] == mask[i], that means that there's one conflict in [row, column]
+    flat = np.zeros(N, int) + row # Mask for horizontal damage
+    up = np.arange(N) # mask for diagonally upward damage
+    diff = row-up[column] # correcting offset so the path goes through [row, column]
+    up += diff 
+    down = np.flip(np.arange(N)) # mask for diagonally downward damage
+    diff = row-down[column] # correcting offset so the path goes through [row, column]
+    down += diff
 
+    conf = 0 # Counter for number of conflicts of all types.
 
-    return solution, num_steps
+    conf += np.sum( (map==down)[:column] ) # Diagonal down conflicts from columns to the left.
+    conf += np.sum( (map==up)[:column] ) # Diagonal upward conflicts from columns to the left.
+    conf += np.sum( (map==flat)[:column] ) # Horizontal conflicts from columns to the left.
 
+    conf += np.sum( (map==down)[column+1:] ) # Diagonal down conflicts from columns to the right.
+    conf += np.sum( (map==up)[column+1:] ) # Diagonal up conflicts from columns to the right.
+    conf += np.sum( (map==flat)[column+1:] ) # Horizontal conflicts from columns to the right.
+    return conf
 
-def conflict(x1,y1, x2,y2 ):
-    if x1 == x2 or y1 == y2:
-        return 1
-    if abs(x1-x2) == abs(y1-y2):
-        return 1
-    return 0
+def greedy_reassignment(map, col, N):
+    """
+    Function to select a random greedy reassignment for the queen in column `col` of map `map`.
+    """
+    conflicts = np.zeros(N) # num conflicts in each row.
+    for row in range(N): # calling upon the `num_conflicts` function to efficiently calculate total conflicts of each possible row assignment.
+        conflicts[row] = num_conflicts(map, row, col, N)
+
+    return np.random.choice(np.flatnonzero(conflicts == conflicts.min())) # Randomly uniformly selecting a row from the minimum conflict rows.
 
 if __name__ == '__main__':
     # Test your code here!
     from initialize_greedy_n_queens import initialize_greedy_n_queens
     from support import plot_n_queens_solution
 
-    N = 10
+    N = 1054
     # Use this after implementing initialize_greedy_n_queens.py
+    print("starting init")
     assignment_initial = initialize_greedy_n_queens(N)
+    print("done init")
     # Plot the initial greedy assignment
     plot_n_queens_solution(assignment_initial)
 
+    print("Starting min_conflict")
     assignment_solved, n_steps = min_conflicts_n_queens(assignment_initial)
+    print("Ending min_conflict")
     # Plot the solution produced by your algorithm
+
     plot_n_queens_solution(assignment_solved)

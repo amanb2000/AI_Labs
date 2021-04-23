@@ -4,6 +4,8 @@ import numpy as np
 # NOTE: matplotlib and plt won't be available to your code on the Autolab grader, just here for sample plots convenience
 from matplotlib import pyplot as plt
 
+# from tqdm import tqdm
+
 
 class CarMDP:
     """
@@ -54,31 +56,31 @@ class CarMDP:
         delta = 1
         orientation = state[2]
 
-        if self.orientations[orientation] is 'North':
+        if self.orientations[orientation] == 'North':
             left = (state[0] - delta, state[1] - delta)
             forward = (state[0], state[1] - delta)
             right = (state[0] + delta, state[1] - delta)
-        elif self.orientations[orientation] is 'West':
+        elif self.orientations[orientation] == 'West':
             left = (state[0] - delta, state[1] + delta)
             forward = (state[0] - delta, state[1])
             right = (state[0] - delta, state[1] - delta)
-        elif self.orientations[orientation] is 'South':
+        elif self.orientations[orientation] == 'South':
             left = (state[0] + delta, state[1] + delta)
             forward = (state[0], state[1] + delta)
             right = (state[0] - delta, state[1] + delta)
-        elif self.orientations[orientation] is 'East':
+        elif self.orientations[orientation] == 'East':
             left = (state[0] + delta, state[1] - delta)
             forward = (state[0] + delta, state[1])
             right = (state[0] + delta, state[1] + delta)
 
         # p gives categorical distribution over (state, left, forward, right)
-        if self.A[action] is 'Forward':
+        if self.A[action] == 'Forward':
             p = np.array([0., self.p_err, self.p_corr, self.p_err])
-        elif self.A[action] is 'Right':
+        elif self.A[action] == 'Right':
             p = np.array([0., 0., 2.*self.p_err, self.p_corr])
-        elif self.A[action] is 'Left':
+        elif self.A[action] == 'Left':
             p = np.array([0., self.p_corr, 2. * self.p_err, 0.])
-        elif self.A[action] is 'Brake':
+        elif self.A[action] == 'Brake':
             p = np.array([self.p_corr, 0., 2. * self.p_err, 0.])
 
         candidate_next_state_positions = (state, left, forward, right)
@@ -86,9 +88,9 @@ class CarMDP:
 
         # Handle orientation dynamics (deterministic)
         new_orientation = orientation
-        if self.A[action] is 'Right':
+        if self.A[action] == 'Right':
             new_orientation = (orientation + 1) % 4
-        elif self.A[action] is 'Left':
+        elif self.A[action] == 'Left':
             new_orientation = (orientation - 1) % 4
 
         return next_state_position[0], next_state_position[1], new_orientation
@@ -168,10 +170,19 @@ class ReinforcementLearningAgent:
     Your implementation of a reinforcement learning agent.
     Feel free to add additional methods and attributes.
     """
-    def __init__(self):
+    def __init__(self, epsilon=0.01, alpha=0.1, gamma=0.9):
         ### STUDENT CODE GOES HERE
         # Set any parameters
         # You can add arguments to __init__, so log as they have default values (e.g., epsilon=0.1)
+        self.alpha = alpha
+        self.epsilon = epsilon
+        self.gamma = gamma
+
+        self.Q = {} # dictionary to map `state` -> [EV_action_forward, EV_action_left, EV_action_right, EV_action_brake]
+
+        self.last_action = None
+        self.last_state = None
+
         pass
 
     def reset(self, init_state) -> int:
@@ -182,8 +193,23 @@ class ReinforcementLearningAgent:
         :return: first action to take.
         """
         ### STUDENT CODE GOES HERE
-        return np.random.randint(4) # Random policy (CHANGE THIS)
+        
+        if init_state in self.Q:
+            if np.random.random() < self.epsilon:
+                self.last_action = np.random.randint(4) # Random policy (CHANGE THIS)
+                self.last_state = init_state
+                return self.last_action
+            else:
+                self.last_action = np.argmax(self.Q[init_state])
+                self.last_state = init_state
+                return self.last_action
+        
+        self.Q[init_state] = np.zeros(4)
+        self.last_action = np.random.randint(4)
+        self.last_state = init_state
+        return self.last_action # Random policy (CHANGE THIS)
 
+        
     def next_action(self, reward: float, state: int, terminal: bool) -> int:
         """
         Called during each time step of a reinforcement learning episode
@@ -197,7 +223,30 @@ class ReinforcementLearningAgent:
         # Produce the next action to take in an episode as a function of the observed reward and state
         # You may find it useful to track past actions, states, and rewards
         # Additionally, algorithms that learn during an episode (e.g., temporal difference) may find use for this method
-        return np.random.randint(4)  # Random policy (CHANGE THIS)
+
+        # Q-learning update rule based on reward:
+        max_current = 0
+        if state in self.Q:
+            max_current = max(self.Q[state])
+
+        self.Q[self.last_state][self.last_action] += self.alpha*(reward + self.gamma * max_current - self.Q[self.last_state][self.last_action] )
+
+        # Generating the new move
+        if state in self.Q:
+            if np.random.random() < self.epsilon: # we are exploring!
+                self.last_action = np.random.randint(4) # Random policy (CHANGE THIS)
+                self.last_state = state
+                return self.last_action
+            else: # going by the book.
+                self.last_action = np.argmax(self.Q[state])
+                self.last_state = state
+                return self.last_action
+        
+        # If state not in Q, we have no choice but to explore.
+        self.Q[state] = np.zeros(4)
+        self.last_action = np.random.randint(4)
+        self.last_state = state
+        return self.last_action # Random policy (CHANGE THIS)
 
     def finish_episode(self):
         """
@@ -263,10 +312,53 @@ if __name__ == '__main__':
     car_mdp = CarMDP(width, height, obstacles, goal_transition, p_corr=p_corr)
 
     # Autolab will call your agent with no arguments, so set any default parameters in __init__ accordingly
-    rl_agent = ReinforcementLearningAgent()  # You must complete this class above, it is random right now
+    rl_agent = ReinforcementLearningAgent(epsilon=0.03)  # You must complete this class above, it is random right now
     # This function (test_rl_algorithm) is what will be used by Autolab to test your rl_agent on a different car_mdp
-    student_returns = test_rl_algorithm(rl_agent, car_mdp, initial_state, n_episodes=50000, n_plot=4999)
+    student_returns = test_rl_algorithm(rl_agent, car_mdp, initial_state, n_episodes=50000, n_plot=5000)
 
+    # Question 3a
+    n_episodes = 10000
+    epsilons = (0, 0.01, 0.05, 0.1)
+    returns = []
+    num_in_avg = 1
+    for epsilon in epsilons:
+        add_to_returns = []
+        for j in range(num_in_avg):
+            print('.')
+            # Autolab will call your agent with no arguments, so set any default parameters in __init__ accordingly
+            rl_agent = ReinforcementLearningAgent(epsilon=epsilon, alpha=0.1)  # You must complete this class above, it is random right now
+            # This function (test_rl_algorithm) is what will be used by Autolab to test your rl_agent on a different car_mdp
+            student_returns = test_rl_algorithm(rl_agent, car_mdp, initial_state, n_episodes=n_episodes, n_plot=4999999)
+            add_to_returns.append(np.asarray(student_returns))
+        returns.append(add_to_returns)
+
+    averages = []
+
+    for ret in returns:
+        npy = np.asarray(ret)
+        averages.append(np.sum(npy, axis=0)/num_in_avg)
+    # print(averages)
+    
+    # Plot one curve like this for each parameter setting - the template code for ReinforcementLearningAgent just
+    # returns a random action, so this example curve will just be noise. When your method is working, the mean return
+    # should increase as the number of episodes increases. Feel free to change the rolling average width
+    rolling_average_width = 1000
+    # Compute the rolling average (over episodes) to smooth out the curve
+    plt.figure()
+    for i in range(len(epsilons)):
+        rolling_average_i = np.convolve(returns[i][0], np.ones(rolling_average_width), 'valid')/rolling_average_width   
+        plt.plot(rolling_average_i, label='1 eps={}'.format(epsilons[i]))  # Plot the smoothed average return for each episode over n_runs
+        average = np.convolve(averages[i], np.ones(rolling_average_width), 'valid')/rolling_average_width
+        plt.plot(average, label='avg eps={}'.format(epsilons[i]))
+    # plt.grid()
+    plt.title('Learning Curves')
+    plt.xlabel('Episode')
+    plt.ylabel('Return')
+    plt.legend()
+    plt.show()
+
+
+    """
     # Example of plot for Question 3a
     n_runs = 50
     n_episodes = 10000
@@ -290,3 +382,4 @@ if __name__ == '__main__':
     plt.ylabel('Average Return')
     plt.legend(['Random Policy'])
     plt.show()
+    """

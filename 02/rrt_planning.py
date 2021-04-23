@@ -73,7 +73,7 @@ def planning(rrt_dubins, display_map=False):
 
     # LOOP for max iterations
     i = 0
-    final = False
+    final = None
     while i < rrt_dubins.max_iter:
         i += 1
 
@@ -89,34 +89,40 @@ def planning(rrt_dubins, display_map=False):
 
         min_i = 0
         # Find an existing node nearest to the random vehicle state
-        if(random.random() < 0.9):
+        if(random.random() < 0.9): # 90% chance of taking the random exploration path
             # Find the nearest node to this random node.
-            goal = rrt_dubins.Node(x,y,yaw)
-            min_dist = (rrt_dubins.node_list[0].x-x)**2 + (rrt_dubins.node_list[0].y-y)**2
-            min_i = 0
-            for i in range(len(rrt_dubins.node_list)):
+            goal = rrt_dubins.Node(x,y,yaw) # `goal` is a randomly instantiate node.
+            min_dist = (rrt_dubins.node_list[0].x-x)**2 + (rrt_dubins.node_list[0].y-y)**2 # initializing minimum distance for node search.
+            min_i = 0 
+            for i in range(len(rrt_dubins.node_list)): 
+                # Scanning over all existing nodes to find the nearest one to our exploratory goal node.
                 dist = (rrt_dubins.node_list[i].x-x)**2 + (rrt_dubins.node_list[i].y-y)**2
                 if dist < min_dist:
                     min_dist = dist
                     min_i = i
             
             # new_node = rrt_dubins.propogate(rrt_dubins.node_list[min_i], rrt_dubins.node(x, y, yaw)) #example of usage
-        else:
+        else: # Non-exploration path
             # Find the nearest node to the objective.
-            goal = rrt_dubins.goal
+            goal = rrt_dubins.goal # Our goal node in this case is the
+            # Initializing minimum distance 
             min_dist = (rrt_dubins.node_list[0].x-rrt_dubins.goal.x)**2 + (rrt_dubins.node_list[0].y-rrt_dubins.goal.y)**2
             min_i = 0
             for i in range(len(rrt_dubins.node_list)):
+                # Scanning over all existing nodes to find the nearest one to our exploratory goal node.
                 dist = (rrt_dubins.node_list[i].x-rrt_dubins.goal.x)**2 + (rrt_dubins.node_list[i].y-rrt_dubins.goal.y)**2
                 if dist < min_dist:
                     min_dist = dist
                     min_i = i
-            
+
+        # Generating a new node using propagate that connects to our closest existing node to our goal node from above.
         new_node = rrt_dubins.propogate(rrt_dubins.node_list[min_i], goal)
 
         # Check if the path between nearest node and random state has obstacle collision
         # Add the node to nodes_list if it is valid
+        node_ok = False # boolean for if the node was accepted or rejected by the collision subroutine
         if rrt_dubins.check_collision(new_node):
+            node_ok = True
             rrt_dubins.node_list.append(new_node) # Storing all valid nodes
 
         # Draw current view of the map
@@ -124,19 +130,20 @@ def planning(rrt_dubins, display_map=False):
         if display_map:
             rrt_dubins.draw_graph()
 
-        # Check if new_node is close to goal
-        if new_node.is_state_identical(rrt_dubins.goal):
-            print("Iters:", i, ", number of nodes:", len(rrt_dubins.node_list))
-            final = new_node
+        # Check if new_node is close to goal AND is a valid non-collision node.
+        if new_node.is_state_identical(rrt_dubins.goal) and node_ok: 
+            print("Iters:", i, ", number of nodes:", len(rrt_dubins.node_list)) # print number of iterations + number of nodes.
+            final = new_node # `final` will be the last node in our path to the goal since it is `identical` to the goal node.
             break
 
-    if i == rrt_dubins.max_iter:
+    if i == rrt_dubins.max_iter: # If we reached max iterations, we print it.
         print('reached max iterations')
 
     # Return path, which is a list of nodes leading to the goal
     path = []
-   #  print("Dubins start.parent: ", rrt_dubins.start.parent)
-    while(final != None):
+    while(final != None): # Keep following the parent chain until we reach `None`, the first node's parent. 
        path.append(final)
        final = final.parent
-    return path
+    path.reverse() # Reversing the path so it's a valid dubin's path from the start to the objective.
+
+    return path # Returning path.

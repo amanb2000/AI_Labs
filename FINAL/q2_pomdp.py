@@ -1,5 +1,6 @@
 # Any additional import statements will be removed by Autolab
 import numpy as np
+# from tqdm import tqdm
 
 
 def categorical_sample_index(p: np.ndarray) -> int:
@@ -113,6 +114,12 @@ class ChatbotSolver:
         self.T = T
         self.P = P
 
+        print("T: ")
+        print(T)
+
+        print("P: ")
+        print(P)
+
         ### STUDENT CODE GOES HERE - load any information that you need to implement your policy
         # You will most likely want to load a numpy array that stores the policy you learned with value iteration
         # Example: how to save an array as a .npy file (do this on your machine):
@@ -129,7 +136,25 @@ class ChatbotSolver:
         # Finally, load your code in this __init__() method (with this EXACT relative path):
         # with open("../student_submission/lookup_table.npy", 'rb') as f:
         #     self.lookup_table = np.load(f).T
-        pass
+
+        # path = "U10.npy"
+        path = "../student_submission/U10.npy"
+        U = None
+        with open(path, 'rb') as f:
+            U = np.load(f, allow_pickle=True)
+        lu = len(U)
+        ls = 5
+        
+        A = np.zeros([lu, ls])
+
+        for i in range(len(U)):
+            A[i,:] = U[i][1]
+
+        self.A = A
+        self.U = U
+
+        self.b = None
+        self.last_action = None
 
     def restart(self, b_init: np.ndarray) -> int:
         """
@@ -147,7 +172,14 @@ class ChatbotSolver:
         # Then, choose and return the first action from (0, 1, 2)
         # TIP: you will probably want to store the actions you take, or at least the previous one...
 
-        return np.random.randint(3)  # Replace this random policy with your solution
+        self.b = b_init
+
+        # Select an action
+        action_idx = np.argmax(self.A @ self.b)
+        action = self.U[action_idx][0]
+        self.last_action = action
+
+        return action  # Replace this random policy with your solution
 
     def compute_action(self, percept: int) -> int:
         """
@@ -161,29 +193,206 @@ class ChatbotSolver:
         # Update your belief from the percept (and last action...), then select and return the next action to take
         # TIP: you will probably want to store the last action taken as well...
 
-        return np.random.randint(3)  # Replace this random policy with your solution
+        # Update our belief:
+        new_belief = np.zeros(self.b.shape)
+        for s_p in range(5):
+            new_belief[s_p] = self.P[percept, s_p] # new_belief[s_p] = P(e | s_p)
+            sum_term = 0
+            for s in range(5):
+                sum_term += self.T[s, self.last_action, s_p] * self.b[s]# sum_term += P(s_p | s, a) b[s]
+            new_belief[s_p] += sum_term
+
+        new_belief /= np.sum(new_belief)
+
+        self.b = new_belief
+        action_idx = np.argmax(self.A @ self.b)
+        action = self.U[action_idx][0]
+
+        self.last_action = action
+
+        return action  # Replace this random policy with your solution
+
+
+
+# PLOTTING CODE #
+def kill_dominated_truncated(U,pomdp,comb=0.01):
+    # Step I: Create the big A matrix. 
+    lu = len(U)
+    ls = len(pomdp.S)
+    A = np.zeros([lu, ls])
+
+    for i in range(len(U)):
+        A[i,:] = U[i][1]
+
+    A = A[:,1:4]
+    
+    # Step II: Test where the argmax occurs for different values of P's
+    argmaxes = []
+
+    ps = np.arange(0,1,comb)
+
+    cur_vec = np.zeros(3)
+
+    for p0 in ps:
+        for p1 in ps:
+            if p0+p1 > 1:
+                continue
+            p2 = 1-p0-p1
+            cur_vec[0] = p0
+            cur_vec[1] = p1
+            cur_vec[2] = p2
+
+            argmax = np.argmax(A @ cur_vec)
+            # print("argmax: ",argmax)
+            if argmax not in argmaxes:
+                argmaxes.append(argmax)
+
+    print("From argmax: Length of argmax is: ",len(argmaxes))
+
+    U_new = []
+
+    for i in range(len(U)):
+        if i in argmaxes:
+            U_new.append(U[i])
+    
+    return U_new
+
+def kill_dominated(U, pomdp, comb=0.05):
+    # Step I: Create the big A matrix. 
+    lu = len(U)
+    ls = len(pomdp.S)
+    A = np.zeros([lu, ls])
+
+    for i in range(len(U)):
+        A[i,:] = U[i][1]
+    
+    # Step II: Test where the argmax occurs for different values of P's
+    argmaxes = []
+
+    ps = np.arange(0,1,comb)
+
+    cur_vec = np.zeros(5)
+
+    for p0 in ps:
+        for p1 in ps:
+            for p2 in ps:
+                for p3 in ps:
+                    if p0+p1+p2+p3 > 1:
+                        continue
+                    p4 = 1-p0-p1-p2-p3
+                    cur_vec[0] = p0
+                    cur_vec[1] = p1
+                    cur_vec[2] = p2
+                    cur_vec[3] = p3
+                    cur_vec[4] = p4
+
+                    argmax = np.argmax(A @ cur_vec)
+                    # print("argmax: ",argmax)
+                    if argmax not in argmaxes:
+                        argmaxes.append(argmax)
+
+    print("From argmax: Length of argmax is: ",len(argmaxes))
+
+    U_new = []
+
+    for i in range(len(U)):
+        if i in argmaxes:
+            U_new.append(U[i])
+
+    return U_new
+
+def value_iterate(pomdp, level=10, comb=0.05):
+    U = []
+    U_p = []
+
+    # Step 0: get a few constants.
+    slen = len(pomdp.S)
+    alen = len(pomdp.A)
+    print("|A|: {}".format(alen))
+    print("|S|: {}".format(slen))
+    print("P: {}".format(pomdp.P))
+
+    # Step I: Generating all 1-step plans in U.
+    for a in pomdp.A:
+        add_ary = [a, None, []] # add_ary[1] will be \vec alpha_p
+        alpha_vec = np.zeros(slen)
+        for s in range(slen):
+            alpha_vec[s] = pomdp.R[s]
+            for s_p in range(slen):
+                alpha_vec[s] += pomdp.T[s,a,s_p] * pomdp.R[s_p]
+        
+        add_ary[1] = alpha_vec
+        U.append(add_ary)
+    
+    print(U)
+
+    print("Saving value of U for iteration {}...".format(1))
+    with open('cache/U{}.npy'.format(1), 'wb') as f:
+        np.save(f, U)
+    print("Done saving.\n")
+
+    for cnt in range(level): # We have already done the first value iteration, so we have `level-1` left.
+        U_p = []
+        for a in pomdp.A:
+            for p1 in U:
+                for p2 in U:
+                    for p3 in U:
+                        add_ary = [a, None, [p1, p2, p3]]
+                        alpha = np.zeros(slen)
+                        for s in range(slen):
+                            alpha[s] = pomdp.R[s]
+                            add_term = 0
+                            for s_p in range(slen):
+                                add_term_p1 = pomdp.T[s,a,s_p]
+                                add_term_p2 = 0
+                                for e in range(3): # percepts are in range 3.
+                                    add_term_p2 += pomdp.P[e+1,s_p]*add_ary[2][e][1][s_p]
+
+                                add_term += add_term_p1*add_term_p2
+                            alpha[s] += add_term
+                        add_ary[1] = alpha.copy()
+
+                        U_p.append(add_ary)
+        U = U_p.copy()
+        print("Iteration {}: Size of U is {}".format(cnt+2, len(U_p)))
+        # Cull the weak here.
+        # U = kill_dominated(U, pomdp, comb=comb)
+        U = kill_dominated_truncated(U, pomdp, comb=comb)
+        print("After killing the weak, U is {}".format(len(U)))
+
+        print("Saving value of U for iteration {}...".format(cnt+2))
+        with open('cache/U{}.npy'.format(cnt+2), 'wb') as f:
+            np.save(f, U)
+        print("Done saving.\n")
 
 
 if __name__ == '__main__':
     # This is how Autolab will test your solver
+    generate_arrays = False
+
     n_runs = 10000  # Number of runs - your score will be based on your average return over these runs
 
     pomdp = get_chatbot_pomdp()  # Instantiate the chatbot POMDP
     solver = ChatbotSolver(pomdp.T, pomdp.P)  # Instantiate your solver
 
-    total_returns = np.zeros(n_runs)  # Record the total return of each run
+    if generate_arrays:
+        print("Starting value iteration!\n")
+        value_iterate(pomdp, comb=0.01, level=10)
+    else: # Leaving this branch as is for testing.
+        total_returns = np.zeros(n_runs)  # Record the total return of each run
 
-    b_init = np.array([0., 0.25, 0.25, 0.5, 0.])  # The initial belief state (this will vary per run on Autolab)
-    for idx in range(n_runs):
-        init_state = categorical_sample_index(b_init)  # Each run, sample an initial state from the initial belief
-        pomdp.set_initial_state(init_state)  # Reset the POMDP
-        a0 = solver.restart(b_init)  # Restart your solver and get its first action
-        total_return, percept = pomdp.take_action(a0)  # Take the first action, observe the first reward and percept
-        while pomdp.state_history[-1] not in pomdp.S_terminal:  # Iterate until arriving in a terminal state
-            a = solver.compute_action(percept)  # Get the next action based on the percept
-            reward, percept = pomdp.take_action(a)  # Execute this action, observe the next reward and percept
-            total_return += reward  # Add the reward to the total return for this run
+        b_init = np.array([0., 0.25, 0.25, 0.5, 0.])  # The initial belief state (this will vary per run on Autolab)
+        for idx in range(n_runs):
+            init_state = categorical_sample_index(b_init)  # Each run, sample an initial state from the initial belief
+            pomdp.set_initial_state(init_state)  # Reset the POMDP
+            a0 = solver.restart(b_init)  # Restart your solver and get its first action
+            total_return, percept = pomdp.take_action(a0)  # Take the first action, observe the first reward and percept
+            while pomdp.state_history[-1] not in pomdp.S_terminal:  # Iterate until arriving in a terminal state
+                a = solver.compute_action(percept)  # Get the next action based on the percept
+                reward, percept = pomdp.take_action(a)  # Execute this action, observe the next reward and percept
+                total_return += reward  # Add the reward to the total return for this run
 
-        total_returns[idx] = total_return  # Store the total return
+            total_returns[idx] = total_return  # Store the total return
+        print(sum(total_returns))
 
-    # Your grade will be based on a linear interpolation between the score of two reference solvers
+        # Your grade will be based on a linear interpolation between the score of two reference solvers

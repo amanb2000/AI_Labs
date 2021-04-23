@@ -15,21 +15,20 @@ def breadth_first_search(problem):
              num_nodes_expanded: number of nodes expanded by your search
              max_frontier_size: maximum frontier size during search
     """
-
+    # Extracting initial node and goal node for convenience.
     init_node = problem.init_state
     goal = problem.goal_states[0]
 
     # "Actions" are just tuples of integers. Integers represent vertices.
     # The only way to get information on a vertex is to call `problem.get_action(vertex)`.
-
     
-    # Step I: Create Dictionary of Nodes and deque() datastructure.
+    # Step I: Create Dictionary of Nodes and deque() datastructures.
 
-    node_dict = {}
-    node_dict[problem.init_state] = Node(None, True, None, 0)
+    node_dict = {} # Primary purpose of dictionary is to track parent values.
+    node_dict[problem.init_state] = Node(None, True, None, 0) # Populating dictionary with only known node: initial state.
 
-    Q = deque()
-    Q.append(init_node)
+    Q = deque() # Queue gives an order to explore new nodes.
+    Q.append(init_node) # Adding initial node to the Queue 
 
     # Step II: While the Q isn't empty...
         # `popleft()` the leftmost element
@@ -46,8 +45,8 @@ def breadth_first_search(problem):
         # Processing the children of v.
         actions = problem.get_actions(v)
 
-        for (v1, v2) in actions: 
-            if v2 not in node_dict:
+        for (v1, v2) in actions: # Iterating through each potential action.
+            if v2 not in node_dict: # Adding the child node to the queue if it's not already been processed.
                 node_dict[v2] = Node(v, True, None, node_dict[v].path_cost+1)
                 Q.append(v2)
  
@@ -57,8 +56,8 @@ def breadth_first_search(problem):
     if goal not in node_dict: # Did not find goal node. Return empty list.
         return [], None, None
 
-    path = []
-
+    # Creating the path to the goal based on the parent dictionary.
+    path = [] 
     path.append(goal)
     cur_node = node_dict[goal].parent
     while cur_node != None:
@@ -69,7 +68,7 @@ def breadth_first_search(problem):
             
     
 
-
+    # Returning results!
     max_frontier_size = 0
     num_nodes_expanded = 0
     return path, num_nodes_expanded, max_frontier_size

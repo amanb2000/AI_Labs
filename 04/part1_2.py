@@ -59,9 +59,8 @@ def value_iteration(env: mdp_env, agent: mdp_agent, eps: float, max_iter = 1000)
        <agent>  Implicitly, you are populating the utlity matrix of
                 the mdp agent. Do not return this function.
     """
-    policy = np.empty_like(env.states)
-    # agent.utility = np.zeros([len(env.states), 1])
-    agent.utility = np.zeros(len(env.states))
+    policy = np.empty_like(env.states) # Initializing the policy as a 1-D array (will be reshaped at the end).
+    agent.utility = np.zeros(len(env.states)) # Initializing the utility as a 1-D array (will be reshaped at the end). 
 
 
     ## START: Student code
@@ -69,30 +68,30 @@ def value_iteration(env: mdp_env, agent: mdp_agent, eps: float, max_iter = 1000)
     # transition_model:  Matrix of size (SxSxA) specifying all of the
     #                    transition probabilities
     
-    U_p = np.zeros(agent.utility.shape) # U'
+    U_p = np.zeros(agent.utility.shape) # U', U prime from the equations.
 
     delta = 0 # Maximum change in utility of any state in an iteration.
 
     cnt = 0 # counter for the number of iterations.
     while cnt < max_iter:
-        delta = 0
-        agent.utility = U_p.copy()
+        delta = 0 # resetting delta to zero for the iteration.
+        agent.utility = U_p.copy() # Copying out the value of U prime obtained in the previous iteration. 
 
-        for s in env.states:
+        for s in env.states: # Looping through each possible state
             max_term = None # max_{a\in A} (\sum_{s'} P(s'|s,a) U[s'] )
-            for a in env.actions:
-                pot_max = 0
+            for a in env.actions: # loop to find the maximizing a value. 
+                pot_max = 0 # potential maximum
                 for s_p in env.states: # s_p is s', we now sum over P(s'|s,a)*U[s']
-                    pot_max += env.transition_model[s,s_p,a]*agent.utility[s_p]
-                if max_term == None or pot_max > max_term:
+                    pot_max += env.transition_model[s,s_p,a]*agent.utility[s_p] # adding the expected value of s'*p(s') 
+                if max_term == None or pot_max > max_term: # updating the max_term
                     max_term = pot_max
             
-            U_p[s] = env.rewards[s] + agent.gamma * max_term
+            U_p[s] = env.rewards[s] + agent.gamma * max_term # U' = R[s] + gamma * max{...}
 
-        if delta < np.max(np.abs(agent.utility - U_p)):
+        if delta < np.max(np.abs(agent.utility - U_p)): # Updating the value of delta based on the most changed utility value. 
             delta = np.max(np.abs(agent.utility - U_p))
 
-        if delta < eps*(1-agent.gamma)/agent.gamma:
+        if delta < eps*(1-agent.gamma)/agent.gamma: # Ending the loop of delta is below the cutoff value. 
             break
 
     # Generating the policy: For each state, we take the action with the maximum expected value.
@@ -100,18 +99,17 @@ def value_iteration(env: mdp_env, agent: mdp_agent, eps: float, max_iter = 1000)
         max_a = None
         max_EV = None
 
-        for a in env.actions:
-            pot_max_EV = 0
-            for s_p in env.states:
-                pot_max_EV += env.transition_model[s,s_p,a]*agent.utility[s_p]
-            if max_EV == None or pot_max_EV > max_EV: 
+        for a in env.actions: # Iterating over each possible actions to maximize
+            pot_max_EV = 0 
+            for s_p in env.states: # Iterating over each s', second degree states
+                pot_max_EV += env.transition_model[s,s_p,a]*agent.utility[s_p] # determining the expected value of the action based on the second-degree states. 
+            if max_EV == None or pot_max_EV > max_EV: # updating the maximum expected value. 
                 max_EV = pot_max_EV
                 max_a = a
         
-        policy[s] = max_a
+        policy[s] = max_a # Updating the policy based on the maximizing action. 
 
-    agent.utility = agent.utility.reshape( [len(agent.utility), 1] )
-    # print("\n\nAGENT.UTILITY.SHAPE: {}\n\n".format(agent.utility.shape))
+    agent.utility = agent.utility.reshape( [len(agent.utility), 1] ) # re-shaping the utility to fit with the assignment requirements (TIP: use the `@` matrix multiplication operator instead of using weirdly shaped column vectors).
 
     ## END Student code
     return policy

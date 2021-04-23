@@ -15,16 +15,18 @@ def bidirectional_search(problem):
 
     # STEP I: Create dictionaries and sets for init-starting and goal-starting trees.
 
+    # Extracting initial node and goal node for convenience.
     init_node = problem.init_state
     goal = problem.goal_states[0]
 
+    # Setting up data structures to track progress.
     I_set = set() # Set that functions as a hash table to quickly check if 
                   # the frontiers intersect.
     I_set.add(init_node)
     I_dict = {} # Dictionary for storing the parent of each object added to set.
     I_dict[init_node] = None
     I = deque() # Queue for storing the vertices that still need to be processed.
-    I.append(init_node)
+    I.append(init_node) 
 
     # Same data structures for branching out from goal node.
     G_set = set()
@@ -50,11 +52,11 @@ def bidirectional_search(problem):
             if v2 not in I_set: # If the node has not been visited...
                 I_dict[v2] = v # Add to the dictionary with the parent `v`
                 I_set.add(v2) # Add to the set for quick hash-based search.
-                I.append(v2)
+                I.append(v2) # Add to the queue.
 
 
+        # Same procedure is followed for the other wavefront.
         v = G.popleft()
-
         G_set.add(v)
 
         if v in I_set:
@@ -74,22 +76,23 @@ def bidirectional_search(problem):
     if goal not in G_set and goal not in I_set:
         return [], None, None
 
-    # Construct the path...
+    # Construct the path from "meet in the middle" node v -> init_node
     path = [v]
     cur_node = I_dict[v] #parent of v on the init side
     while cur_node != None:
         path.append(cur_node)
         cur_node = I_dict[cur_node]
 
-    path.reverse()
+    path.reverse() # Reverse the path so it traverses init_node->v
 
+    # Add nodes from v -> goal node to the existing path.
     cur_node = G_dict[v]
     while cur_node != None:
         path.append(cur_node)
         cur_node = G_dict[cur_node] 
 
 
-
+    # Return values. 
     max_frontier_size = 0
     num_nodes_expanded = 0
     return path, num_nodes_expanded, max_frontier_size
@@ -119,6 +122,7 @@ if __name__ == '__main__':
     correct = problem.check_graph_solution(path)
     print("Solution is correct: {:}".format(correct))
     print(path)
+
 
     # Use stanford_large_network_facebook_combined.txt to make your own test instances
     E = np.loadtxt('../datasets/stanford_large_network_facebook_combined.txt', dtype=int)

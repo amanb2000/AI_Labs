@@ -27,24 +27,24 @@ def pl_fc_entails(symbols_list : list, KB_clauses : list, known_symbols : list, 
 
     db = set(known_symbols) # instantiating our database with our known symbols
 
-    added = True # boolean for if our database db is still changing or if we have hit the limit.
+    added = True # boolean for if our knowledge base is still changing or if we have hit the limit.
 
-    while added:
+    while added: # while we are yet to converge,
         added = False
-        processed = []
-        for i, clause in enumerate(KB_clauses):
-            if db.issuperset(clause.body) and clause.conclusion not in db:
-                db.add(clause.conclusion)
-                added = True
-                processed.append(i-len(processed)) # Gosh am I clever
+        processed = [] # array for storing processed clause indexes in the KB
+        for i, clause in enumerate(KB_clauses): # Iterating through all remaining unprocessed clauses.
+            if db.issuperset(clause.body) and clause.conclusion not in db: # If the body of the clause is in the KB and the conclusion is NOT, it's new!
+                db.add(clause.conclusion) # Adding the conclusion to our knowledge base.
+                added = True # Updating our variable for documenting convergence (lack thereof).
+                processed.append(i-len(processed)) # Adding the ID of the processed clause (minus i because of offset introduced by pop() later)
 
-        if query in db:
+        if query in db: # Checking if we reached our goal
             return True
 
-        for p in processed:
+        for p in processed: # Popping the clauses from the KB that we have processed.
             KB_clauses.pop(p)
 
-    return False # remove line if needed
+    return False # Returning false if we exhausted our resources and were not able to prove the query.
     ### END: Your code
 
 

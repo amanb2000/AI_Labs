@@ -46,7 +46,8 @@ def test1(create_graph=False) -> int:
           stored and plots are created to evaluate the agent
     """
     # Settings
-    num_arms = np.random.randint(50,100) # bandit arm probabilities of success
+    # num_arms = np.random.randint(50,100) # bandit arm probabilities of success
+    num_arms = 68
     num_experiments = 500 # number of experiments to perform
     num_eps = 400 # number of steps (episodes)
     output_dir = os.path.join(os.getcwd(), "output")

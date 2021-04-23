@@ -39,11 +39,11 @@ class MAB_agent:
         ## IMPLEMENTATION
 
         # Hyperparams:
-        self.Q_init = 0. # initialization values for each Q
+        self.Q_init = 1./num_arms # initialization values for each Q
 
         # Initializations:
-        self.N_a = np.zeros(num_arms)
-        self.Q = np.ones(num_arms) * self.Q_init
+        self.N_a = np.zeros(num_arms) # 1D array to count the number of times each action has been taken. 
+        self.Q = np.ones(num_arms) * self.Q_init # Expected value of each action (running average)
         self.t = 1 # time step number
         self.c = .1 # tuning parameter for how much we value reduction in uncertainty.
 
@@ -55,9 +55,9 @@ class MAB_agent:
             Optinal function, only use if needed.
         """
         ## IMPLEMENTATION
-        self.N_a[action] += 1
-        self.t += 1
-        self.Q[action] = self.Q[action] + (1/self.N_a[action])*(reward-self.Q[action])
+        self.N_a[action] += 1 # incrementing number of times the action has been taken
+        self.t += 1 # incrementing time
+        self.Q[action] = self.Q[action] + (1/self.N_a[action])*(reward-self.Q[action]) # Applying incremental update to expected value. 
 
     def get_action(self) -> int:
         """
@@ -67,8 +67,8 @@ class MAB_agent:
             Return the index of the arm picked by the policy.
         """
         ## IMPLEMENTATION
-        EVs = self.Q + self.c * np.sqrt(np.log(self.t)/(self.N_a+.1))
-        return np.argmax(EVs)
+        EVs = self.Q + self.c * np.sqrt(np.log(self.t)/(self.N_a+.1)) # expected value is the Q-value plus the sqrt-log measure of uncertainty (AIMA).
+        return np.argmax(EVs) # Returning the argument that maximizes expected value.
 
 
 

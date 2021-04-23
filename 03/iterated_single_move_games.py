@@ -227,28 +227,27 @@ class StudentAgent(IteratedGamePlayer):
         :param game_matrix: square payoff matrix for the game being played.
         """
         super(StudentAgent, self).__init__(game_matrix)
-        self.MEM = 4
-        self.q_size = 3**(self.MEM*2 + 1)
+        self.MEM = 3 # memory length (number of past games stored)
+        self.q_size = 3**(self.MEM*2 + 1) # length of q-value array storage.
 
-        self.Q = np.zeros(self.q_size)
-        self.my_moves = np.zeros(self.MEM)
-        self.others_moves = np.zeros(self.MEM)
+        self.Q = np.zeros(self.q_size) # initializing Q-values to all zeros.
+        self.my_moves = np.zeros(self.MEM) # initializing personal move history to zeros
+        self.others_moves = np.zeros(self.MEM) # initializing opponent move history to zeros.
         
-        self.alpha = 0.1
-        self.gamma = 1
-
-        self.non_prob_rate = 200 # portion of the time we just take the action
+        self.alpha = 0.1 # learning rate for q-learning system.
+        self.gamma = 0.99 # future reward discount rate for q-learning.
+ 
+        self.non_prob_rate = 0.40 # portion of the time we just take the action
                                  # with highest q-value.
 
-        # TODO: initialize Q-values to actual expected values for 
-        #       each move given a random opponent. 
+        init_bias = 3 # Bias for q-values to be initialized based on expected value of a given move against a random agent. 
 
-        self.init_bias = 3
+        # Expected value of a move against a random agent is equal to the sum along each row of the game matrix.
+        rock_EV_0 = np.sum(self.game_matrix[0,:])*init_bias 
+        paper_EV_0 = np.sum(self.game_matrix[1,:])*init_bias
+        scissors_EV_0 = np.sum(self.game_matrix[2,:])*init_bias
 
-        rock_EV_0 = np.sum(self.game_matrix[0,:])*self.init_bias
-        paper_EV_0 = np.sum(self.game_matrix[1,:])*self.init_bias
-        scissors_EV_0 = np.sum(self.game_matrix[2,:])*self.init_bias
-
+        # Initializing Q-values to expected values of each move. 
         for i in range(len(self.Q)):
             if i % 3 == 0:
                 self.Q[i] = rock_EV_0
@@ -256,8 +255,6 @@ class StudentAgent(IteratedGamePlayer):
                 self.Q[i] = paper_EV_0
             else:
                 self.Q[i] = scissors_EV_0
-
-        self.iter = 0
 
     def get_Q(self, action, mmoves, omoves):
         """
@@ -269,26 +266,32 @@ class StudentAgent(IteratedGamePlayer):
         :param action: Action in {0, 1, 2}.
         """
 
-        idx = action
-        xp = 1
+        idx = action # Q-array index (0th place value is the `action`
+        xp = 1 # exponent for base-3 to base-10 conversion.
 
-        for i in mmoves:
+        for i in mmoves: # iterating through agent's moves
             idx += 3**xp
             xp += 1
 
-        for i in omoves:
+        for i in omoves: # iterating through opponent's moves. 
             idx += 3**xp
             xp += 1
-        
+       
+        # Return index in Q-array and value at index.
         return idx, self.Q[idx]
 
 
     def get_prob_action(self):
+        """
+        Function to obtain probability of a given action based on Q-values. 
+        Runs the Q-values of each action through a softmax function to convert to probabilities. 
+        """
+        # Getting Q-values for each action given the current existing set of moves by the agent and the opponent.
         prob = np.zeros(3)
         for action in (0, 1, 2):
             _, prob[action] = self.get_Q(action, self.my_moves, self.others_moves)
 
-        prob -= np.max(prob)
+        # Softmaxing the Q-values.
         prob = np.exp(prob)/np.sum(np.exp(prob))
 
         return prob
@@ -300,13 +303,14 @@ class StudentAgent(IteratedGamePlayer):
         :return: an int in (0, ..., n_moves-1) representing your move
         """
 
-        r = np.random.random()
-        probs = self.get_prob_action()
+        r = np.random.random() # random number for selecting moves probabilistically based on Q-values. 
+        probs = self.get_prob_action() # Probability of taking each move. 
 
-        if np.random.random() > np.exp(-self.iter/self.non_prob_rate):
+        if np.random.random() < self.non_prob_rate: # if we don't reach the non-probabilistic move rate, we simply take the move with the 
+                                                    # highest expected value
             return np.argmax(probs)
 
-        # print('\tprobs: ', probs)
+        # Otherwise, let r decide which move we take probabilistically.
         if r < probs[0]:
             return 0
         elif r < probs[0] + probs[1]:
@@ -321,16 +325,20 @@ class StudentAgent(IteratedGamePlayer):
         :param other_move:
         :return: nothing
         """
-        self.iter+=1
+        
+        # Shifting entries in current move records for agent and opponent and updating the latest.
         NEW_my_moves = np.roll(self.my_moves, 1)
         NEW_others_moves = np.roll(self.others_moves, 1)
         NEW_my_moves[0] = my_move
         NEW_others_moves[0] = other_move
 
+        # Calculating reward reaped from previous move. 
         R = self.game_matrix[my_move, other_move]
 
+        # Calculating the q-array index for the previous move.
         cur_Q_idx, _ = self.get_Q(my_move, self.my_moves, self.others_moves)
 
+        # Calculating the maximum Q-value for the next iteration.
         next_Qs = np.zeros(3)
         for i in range(3):
             next_Q_idx, nq = self.get_Q(i, NEW_my_moves, NEW_others_moves)
@@ -338,10 +346,10 @@ class StudentAgent(IteratedGamePlayer):
 
         max_next_Q = np.max(next_Qs)
 
-        # def get_Q(self, action, mmoves, omoves):
-
+        # Updating the q-value for the previous move based on the reward. 
         self.Q[cur_Q_idx] = self.Q[cur_Q_idx] + self.alpha*(R + self.gamma*max_next_Q - self.Q[cur_Q_idx])
 
+        # Updating the internal record of moves. 
         self.my_moves = NEW_my_moves
         self.others_moves = NEW_others_moves
          
@@ -351,21 +359,9 @@ class StudentAgent(IteratedGamePlayer):
         :return: nothing
         """
         # YOUR CODE GOES HERE
+        self.Q = np.zeros(self.q_size)
         self.my_moves = np.zeros(self.MEM)
         self.others_moves = np.zeros(self.MEM)
-
-        rock_EV_0 = np.sum(self.game_matrix[0,:])*self.init_bias
-        paper_EV_0 = np.sum(self.game_matrix[1,:])*self.init_bias
-        scissors_EV_0 = np.sum(self.game_matrix[2,:])*self.init_bias
-
-        for i in range(len(self.Q)):
-            if i % 3 == 0:
-                self.Q[i] = rock_EV_0
-            elif i % 3 == 1:
-                self.Q[i] = paper_EV_0
-            else:
-                self.Q[i] = scissors_EV_0
-
         pass
 
 
@@ -379,9 +375,6 @@ if __name__ == '__main__':
     """
     game_matrix = np.array([[0.0, -1.0, 1.0],
                             [1.0, 0.0, -1.0],
-                            [-1.0, 1.0, 0.0]])
-    game_matrix = np.array([[0.0, -9.0, 1.0],
-                            [9.0, 0.0, -1.0],
                             [-1.0, 1.0, 0.0]])
     uniform_player = UniformPlayer(game_matrix)
     first_move_player = FirstMovePlayer(game_matrix)
@@ -404,10 +397,3 @@ if __name__ == '__main__':
     print("\n\n")
     print("Your player's score: {:}".format(student_score))
     print("Uniform player's score: {:}".format(uniform_score))
-
-    print("\n\n")
-    student_player = StudentAgent(game_matrix)
-    student1_score, student2_score = play_game(student_player, student_player, game_matrix)
-    print("Student 1 score: {}".format(student1_score))
-    print("Student 2 score: {}".format(student2_score))
-    print(student_player.Q)
